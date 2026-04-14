@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Unit 4, Day 2 — Surface Area Checker</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{--bg:#F4F1EC;--surface:#FFF;--border:#D6D0C4;--text:#2C2A26;--muted:#7A756B;--accent:#1B6B93;--accent-lt:#E8F1F5;--ok:#3A7D44;--ok-lt:#E6F2E8;--warn:#C4841D;--warn-lt:#FDF3E4;--err:#B33A3A;--err-lt:#FBEAEA}
+body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);line-height:1.6;min-height:100vh}
+.hdr{background:#1A2332;color:#E8E4DD;padding:14px 20px;position:sticky;top:0;z-index:100}
+.hdr-top{display:flex;justify-content:space-between;align-items:center;gap:12px}
+.hdr h1{font-size:1.1rem;font-weight:600}.hdr .sub{font-size:.72rem;color:#8A9BB0;margin-top:1px}
+.nav-row{display:flex;gap:4px;align-items:center;flex-wrap:wrap;margin-top:10px;padding-bottom:4px}
+.nav-sep{width:1px;height:20px;background:#3A4556;margin:0 4px}
+.nd{padding:3px 8px;border-radius:6px;font-family:'JetBrains Mono',monospace;font-size:.6rem;font-weight:600;border:1.5px solid #3A4556;color:#4A5568;background:transparent;cursor:pointer;transition:all .15s;white-space:nowrap}
+.nd:hover{border-color:#8A9BB0;color:#8A9BB0}
+.nd.done{background:var(--ok);border-color:var(--ok);color:#fff}
+.nd.skipped{background:var(--warn);border-color:var(--warn);color:#fff}
+.nd.active{border-color:var(--accent);color:#fff;background:var(--accent)}
+.progress-bar{height:4px;background:#2A3344;border-radius:2px;margin:8px 20px 0;overflow:hidden}
+.progress-fill{height:100%;background:var(--ok);transition:width .4s ease}
+.main{max-width:680px;margin:0 auto;padding:16px 16px 60px}
+.sh{margin:20px 0 12px;padding:10px 16px;background:#1A2332;color:#E8E4DD;border-radius:10px}
+.sh h2{font-size:.9rem;font-weight:600}.sh p{font-size:.72rem;color:#8A9BB0;margin-top:2px}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:24px;margin-bottom:14px;display:none}
+.card.v{display:block}.card.done{display:block;padding:10px 18px;background:var(--ok-lt);border-color:var(--ok)}.card.done .body{display:none}
+.done-check{color:var(--ok);font-weight:600;font-size:.82rem;display:inline;margin-left:8px}
+.qn{font-family:'JetBrains Mono',monospace;font-size:.72rem;font-weight:500;color:var(--accent);text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px}
+.qp{font-size:1rem;font-weight:600;margin-bottom:4px;line-height:1.5}
+.qp .note{font-weight:400;font-size:.88rem;color:var(--muted);display:block;margin-top:4px}
+.q-diagram{margin:8px 0 16px}
+.step{margin-bottom:16px;animation:fadeIn .3s ease}
+@keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+.step-label{font-size:.72rem;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px}
+.chip-zone{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:14px;min-height:50px}
+.chip{display:flex;flex-direction:column;align-items:center;gap:4px;padding:10px 14px;border:2px solid var(--border);border-radius:10px;background:var(--surface);cursor:pointer;transition:all .18s;user-select:none;min-width:70px}
+.chip:hover{border-color:var(--accent);background:var(--accent-lt);transform:translateY(-2px)}.chip:active{transform:scale(.95)}
+.chip svg{width:52px;height:40px}
+.chip.formula-chip{flex-direction:row;min-width:auto;padding:10px 18px}
+.chip.formula-chip .chip-label{font-size:.92rem;font-weight:500;color:var(--text)}
+.drop-target{border:2px dashed var(--border);border-radius:10px;padding:10px 20px;height:62px;display:flex;align-items:center;justify-content:center;transition:all .2s;margin-bottom:10px;overflow:hidden}
+.drop-target.filled{border-style:solid;border-color:var(--accent);background:var(--accent-lt)}
+.drop-target.correct{border-color:var(--ok);background:var(--ok-lt)}
+.drop-target.wrong{border-color:var(--err);background:var(--err-lt);animation:shake .4s}
+@keyframes shake{0%,100%{transform:translateX(0)}20%{transform:translateX(-6px)}40%{transform:translateX(6px)}60%{transform:translateX(-4px)}80%{transform:translateX(4px)}}
+.drop-target .placeholder{font-size:.82rem;color:var(--muted);font-style:italic}
+.drop-target svg{width:52px;height:40px}
+.alg-options{display:flex;flex-direction:column;gap:8px;margin-bottom:12px;max-width:420px}
+.alg-opt{padding:10px 16px;border:2px solid var(--border);border-radius:8px;background:var(--surface);font-size:.9rem;cursor:pointer;transition:all .15s;text-align:left}
+.alg-opt:hover{border-color:var(--accent);background:var(--accent-lt)}
+.alg-opt.sel{border-color:var(--accent);background:var(--accent-lt);font-weight:600}
+.eq-display{font-family:'JetBrains Mono',monospace;font-size:1.1rem;font-weight:500;padding:12px 16px;background:#f8f6f3;border-radius:8px;margin-bottom:12px;text-align:center;border:1px solid var(--border)}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:10px 20px;border:none;border-radius:8px;font-family:'DM Sans',sans-serif;font-size:.88rem;font-weight:600;cursor:pointer;transition:all .15s}
+.btn-primary{background:var(--accent);color:#fff}.btn-primary:hover{background:#145A7A}
+.btn-next{background:var(--ok);color:#fff;margin-top:8px}.btn-next:hover{background:#2D6636}
+.fb{padding:10px 14px;border-radius:8px;font-size:.88rem;margin-top:10px;margin-bottom:10px;line-height:1.5}
+.fb.ok{background:var(--ok-lt);color:var(--ok);border:1px solid var(--ok)}
+.fb.warn{background:var(--warn-lt);color:var(--warn);border:1px solid var(--warn)}
+.fb.err{background:var(--err-lt);color:var(--err);border:1px solid var(--err)}
+.input-row{display:flex;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap}
+.input-row input{font-family:'JetBrains Mono',monospace;font-size:1rem;padding:8px 12px;border:2px solid var(--border);border-radius:8px;width:140px}
+.input-row input:focus{outline:none;border-color:var(--accent)}
+.locked{opacity:.35;pointer-events:none}
+.redirect-banner{background:#FFF3E0;border:2px solid #E65100;border-radius:10px;padding:16px 18px;margin:14px 0;font-size:.95rem;line-height:1.6;color:#BF360C}
+.btn-skip{background:var(--warn);color:#fff;margin-top:8px;font-size:.82rem;padding:8px 16px}.btn-skip:hover{background:#A56A10}
+.cr-textarea{width:100%;min-height:80px;padding:10px;border:2px solid var(--border);border-radius:8px;font-family:'DM Sans',sans-serif;font-size:.9rem;resize:vertical}
+.cr-textarea:focus{outline:none;border-color:var(--accent)}
+</style>
+</head>
+<body>
+<div class="hdr">
+<div class="hdr-top"><div><h1>Surface Area: Prisms &amp; Cylinders \u2014 Checker</h1><div class="sub">Unit 4, Day 2 \u00B7 Geometry 1</div></div></div>
+<div class="nav-row" id="nav"></div>
+</div>
+<div class="progress-bar"><div class="progress-fill" id="pbar"></div></div>
+<div class="main" id="main"></div>
+<script>
+var C='#2C2A26',M='#7A756B',F='font-family="DM Sans,sans-serif"';
+function txt(x,y,t,o){return '<text x="'+x+'" y="'+y+'" text-anchor="'+(o||'middle')+'" font-size="12" '+F+' fill="'+C+'">'+t+'</text>';}
+function mtxt(x,y,t){return '<text x="'+x+'" y="'+y+'" text-anchor="middle" font-size="11" '+F+' fill="'+M+'">'+t+'</text>';}
+
+// ── 3D DIAGRAMS ──
+function drawDiagram(q){
+  if(!q.dims)return '';
+  var d=q.dims,s='<svg viewBox="0 0 220 150" width="220" xmlns="http://www.w3.org/2000/svg">';
+  if(q.solid==='rect_prism'){
+    // front face
+    s+='<polygon points="20,50 120,50 120,130 20,130" fill="none" stroke="'+C+'" stroke-width="2"/>';
+    // top face
+    s+='<polygon points="20,50 60,20 160,20 120,50" fill="none" stroke="'+C+'" stroke-width="2"/>';
+    // right face
+    s+='<polygon points="120,50 160,20 160,100 120,130" fill="none" stroke="'+C+'" stroke-width="2"/>';
+    s+=txt(70,145,d.l||'');
+    s+=txt(170,65,d.w||'','start');
+    s+=txt(175,110,d.h||'','start');
+    if(d.SA)s+=mtxt(70,95,'S.A. = '+d.SA);
+  }else if(q.solid==='tri_prism'){
+    // front right triangle — 3:4 proportional (60:80 units), right angle at bottom-left
+    s+='<polygon points="40,130 100,130 40,50" fill="none" stroke="'+C+'" stroke-width="2"/>';
+    // back triangle offset (45 right, -22 up)
+    s+='<polygon points="85,108 145,108 85,28" fill="none" stroke="'+C+'" stroke-width="2"/>';
+    // visible connecting edges
+    s+='<line x1="100" y1="130" x2="145" y2="108" stroke="'+C+'" stroke-width="2"/>';
+    s+='<line x1="40" y1="50" x2="85" y2="28" stroke="'+C+'" stroke-width="2"/>';
+    // hidden connecting edge — dashed
+    s+='<line x1="40" y1="130" x2="85" y2="108" stroke="'+C+'" stroke-width="1.3" stroke-dasharray="5,4"/>';
+    // right angle mark at (40,130)
+    s+='<path d="M 40,120 L 50,120 L 50,130" fill="none" stroke="'+C+'" stroke-width="1.3"/>';
+    // labels
+    s+=txt(70,148,d.a||'');
+    s+=txt(28,93,d.b||'','end');
+    s+=txt(80,82,d.hyp||'');
+    s+=txt(132,128,d.ph||'','start');
+    if(d.SA)s+=mtxt(115,72,'S.A. = '+d.SA);
+  }else if(q.solid==='cylinder'){
+    s+='<ellipse cx="100" cy="30" rx="55" ry="16" fill="none" stroke="'+C+'" stroke-width="2"/>';
+    s+='<line x1="45" y1="30" x2="45" y2="120" stroke="'+C+'" stroke-width="2"/>';
+    s+='<line x1="155" y1="30" x2="155" y2="120" stroke="'+C+'" stroke-width="2"/>';
+    s+='<path d="M 45,120 A 55 16 0 0 0 155,120" stroke="'+C+'" stroke-width="2" fill="none"/>';
+    s+='<path d="M 45,120 A 55 16 0 0 1 155,120" stroke="'+C+'" stroke-width="2" fill="none" stroke-dasharray="5,4" opacity=".4"/>';
+    if(d.r){
+      s+='<line x1="100" y1="30" x2="155" y2="30" stroke="#1B6B93" stroke-width="1.8"/>';
+      s+='<circle cx="100" cy="30" r="2.5" fill="'+C+'"/>';
+      s+=txt(128,24,d.r);
+    }else if(d.d){
+      s+='<line x1="45" y1="30" x2="155" y2="30" stroke="#1B6B93" stroke-width="1.8"/>';
+      s+='<circle cx="45" cy="30" r="2" fill="'+C+'"/>';
+      s+='<circle cx="155" cy="30" r="2" fill="'+C+'"/>';
+      s+=txt(100,24,d.d);
+    }
+    if(d.h)s+=txt(170,80,d.h,'start');
+    if(d.SA)s+=mtxt(100,80,'S.A. = '+d.SA);
+  }
+  s+='</svg>';return s;
+}
+
+// ── SOLID ID CHIPS (clean wireframe, dashed hidden edges) ──
+var SOLID_SVG={
+  rect_prism:'<svg viewBox="0 0 60 44">'
+    +'<polygon points="6,18 30,18 30,40 6,40" fill="none" stroke="'+C+'" stroke-width="2"/>'
+    +'<line x1="6" y1="18" x2="20" y2="6" stroke="'+C+'" stroke-width="2"/>'
+    +'<line x1="30" y1="18" x2="44" y2="6" stroke="'+C+'" stroke-width="2"/>'
+    +'<line x1="20" y1="6" x2="44" y2="6" stroke="'+C+'" stroke-width="2"/>'
+    +'<line x1="44" y1="6" x2="44" y2="28" stroke="'+C+'" stroke-width="2"/>'
+    +'<line x1="30" y1="40" x2="44" y2="28" stroke="'+C+'" stroke-width="2"/>'
+    +'<line x1="6" y1="40" x2="20" y2="28" stroke="'+C+'" stroke-width="1.2" stroke-dasharray="3,3"/>'
+    +'<line x1="20" y1="28" x2="44" y2="28" stroke="'+C+'" stroke-width="1.2" stroke-dasharray="3,3"/>'
+    +'<line x1="20" y1="6" x2="20" y2="28" stroke="'+C+'" stroke-width="1.2" stroke-dasharray="3,3"/>'
+    +'</svg>',
+  tri_prism:'<svg viewBox="0 0 60 44">'
+    +'<polygon points="6,40 6,14 24,40" fill="none" stroke="'+C+'" stroke-width="2"/>'
+    +'<line x1="6" y1="14" x2="26" y2="6" stroke="'+C+'" stroke-width="2"/>'
+    +'<line x1="24" y1="40" x2="54" y2="32" stroke="'+C+'" stroke-width="2"/>'
+    +'<line x1="26" y1="6" x2="54" y2="32" stroke="'+C+'" stroke-width="2"/>'
+    +'<line x1="6" y1="40" x2="34" y2="32" stroke="'+C+'" stroke-width="1.2" stroke-dasharray="3,3"/>'
+    +'<line x1="34" y1="32" x2="54" y2="32" stroke="'+C+'" stroke-width="1.2" stroke-dasharray="3,3"/>'
+    +'<line x1="34" y1="32" x2="26" y2="6" stroke="'+C+'" stroke-width="1.2" stroke-dasharray="3,3"/>'
+    +'<path d="M 6,34 L 12,34 L 12,40" fill="none" stroke="'+C+'" stroke-width="1.2"/>'
+    +'</svg>',
+  cylinder:'<svg viewBox="0 0 60 44">'
+    +'<ellipse cx="30" cy="12" rx="20" ry="7" fill="none" stroke="'+C+'" stroke-width="2"/>'
+    +'<line x1="10" y1="12" x2="10" y2="34" stroke="'+C+'" stroke-width="2"/>'
+    +'<line x1="50" y1="12" x2="50" y2="34" stroke="'+C+'" stroke-width="2"/>'
+    +'<path d="M 10,34 A 20 7 0 0 0 50,34" fill="none" stroke="'+C+'" stroke-width="2"/>'
+    +'<path d="M 10,34 A 20 7 0 0 1 50,34" fill="none" stroke="'+C+'" stroke-width="1.2" stroke-dasharray="3,3"/>'
+    +'</svg>',
+  pyramid:'<svg viewBox="0 0 60 44">'
+    +'<line x1="30" y1="4" x2="8" y2="38" stroke="'+C+'" stroke-width="2"/>'
+    +'<line x1="30" y1="4" x2="52" y2="38" stroke="'+C+'" stroke-width="2"/>'
+    +'<line x1="8" y1="38" x2="52" y2="38" stroke="'+C+'" stroke-width="2"/>'
+    +'<line x1="30" y1="4" x2="46" y2="22" stroke="'+C+'" stroke-width="1.8"/>'
+    +'<line x1="52" y1="38" x2="46" y2="22" stroke="'+C+'" stroke-width="1.8"/>'
+    +'<line x1="8" y1="38" x2="14" y2="22" stroke="'+C+'" stroke-width="1.2" stroke-dasharray="3,3"/>'
+    +'<line x1="14" y1="22" x2="46" y2="22" stroke="'+C+'" stroke-width="1.2" stroke-dasharray="3,3"/>'
+    +'</svg>',
+  cone:'<svg viewBox="0 0 60 44">'
+    +'<line x1="10" y1="35" x2="30" y2="4" stroke="'+C+'" stroke-width="2"/>'
+    +'<line x1="50" y1="35" x2="30" y2="4" stroke="'+C+'" stroke-width="2"/>'
+    +'<ellipse cx="30" cy="35" rx="20" ry="6" fill="none" stroke="'+C+'" stroke-width="2"/>'
+    +'</svg>'
+};
+
+// ── SA FORMULAS ──
+var SA_FORMULAS=[
+  {id:'ph2b',label:'Ph + 2B'},
+  {id:'cyl_sa',label:'2\u03C0rh + 2\u03C0r\u00B2'}
+];
+var DISTRACTOR_FORMULAS=[
+  {id:'ph',label:'Ph'},
+  {id:'cyl_la',label:'2\u03C0rh'},
+  {id:'vol_prism',label:'Bh'},
+  {id:'vol_cyl',label:'\u03C0r\u00B2h'}
+];
+var ALL_FORMULAS=SA_FORMULAS.concat(DISTRACTOR_FORMULAS);
+var S2F={rect_prism:'ph2b',tri_prism:'ph2b',cylinder:'cyl_sa'};
+var SOLIDS=['rect_prism','tri_prism','cylinder','pyramid','cone'];
+function shuffle(a){var arr=a.slice();for(var i=arr.length-1;i>0;i--){var j=Math.floor(Math.random()*(i+1));var t=arr[i];arr[i]=arr[j];arr[j]=t;}return arr;}
+
+var STAGES=[{t:'Practice',d:'Show all work on your practice sheet.'},{t:'Independent Practice',d:'Show all work. Round to the nearest hundredth where needed.'},{t:'Conceptual Reasoning',d:'These ask WHY, not just HOW.'}];
+
+var QS=[
+  // ── PRACTICE forward ──
+  {id:'p1',stage:0,num:'P-1',solid:'rect_prism',dir:'forward',prompt:'Find the total surface area of the rectangular prism.',ans:310,unit:'cm\u00B2',
+    dims:{l:'10 cm',w:'7 cm',h:'5 cm'}},
+  {id:'p2',stage:0,num:'P-2',solid:'rect_prism',dir:'forward',prompt:'Find the total surface area of the rectangular prism.',ans:352,unit:'in\u00B2',
+    dims:{l:'12 in.',w:'4 in.',h:'8 in.'}},
+  {id:'p3',stage:0,num:'P-3',solid:'cylinder',dir:'forward',prompt:'Find the total surface area. Round to nearest hundredth.',ans:527.79,unit:'m\u00B2',tol:0.5,
+    dims:{r:'r = 6 m',h:'h = 8 m'}},
+  {id:'p4',stage:0,num:'P-4',solid:'cylinder',dir:'forward',prompt:'Find the total surface area. Round to nearest hundredth.',note:'The formula needs radius, not diameter!',ans:408.41,unit:'ft\u00B2',tol:0.5,
+    dims:{d:'d = 10 ft',h:'h = 8 ft'}},
+  {id:'p5',stage:0,num:'P-5',solid:'tri_prism',dir:'forward',prompt:'Find the total surface area. Base is a right triangle.',ans:132,unit:'cm\u00B2',
+    dims:{a:'3 cm',b:'4 cm',ph:'h = 10 cm',hyp:'?'}},
+  // ── PRACTICE backward ──
+  {id:'p6',stage:0,num:'P-6',solid:'rect_prism',dir:'backward',prompt:'Find the missing height.',ans:8,unit:'m',
+    dims:{l:'10 m',w:'5 m',h:'h = ?',SA:'340 m\u00B2'},
+    equation:'340 = 100 + 30h',
+    alg:[
+      {prompt:'Add ___ to both sides to remove the constant.',opts:['Add \u2212100','Add 100','Multiply by \u00BD','Multiply by 1/30'],correct:0,result:'240 = 30h'},
+      {prompt:'Multiply both sides by ___ to isolate h.',opts:['1/30','30','\u221230','1/240'],correct:0,result:'(1/30)\u00B7240 = h \u2192 calculator form'}]},
+  {id:'p7',stage:0,num:'P-7',solid:'cylinder',dir:'backward',prompt:'Find the missing height.',ans:7,unit:'cm',
+    dims:{r:'r = 6 cm',h:'h = ?',SA:'156\u03C0 cm\u00B2'},
+    equation:'156\u03C0 = 12\u03C0h + 72\u03C0',
+    alg:[
+      {prompt:'Add ___ to both sides to remove the constant.',opts:['Add \u221272\u03C0','Add 72\u03C0','Multiply by 1/\u03C0','Multiply by 1/12'],correct:0,result:'84\u03C0 = 12\u03C0h'},
+      {prompt:'Multiply both sides by ___ to isolate h.',opts:['1/(12\u03C0)','12\u03C0','\u221212\u03C0','1/84'],correct:0,result:'(1/(12\u03C0))\u00B784\u03C0 = h \u2192 calculator form'}]},
+  {id:'p8',stage:0,num:'P-8',solid:'cylinder',dir:'backward',prompt:'Find the missing height.',ans:18,unit:'in',
+    dims:{r:'r = 2 in.',h:'h = ?',SA:'80\u03C0 in.\u00B2'},
+    equation:'80\u03C0 = 4\u03C0h + 8\u03C0',
+    alg:[
+      {prompt:'Add ___ to both sides to remove the constant.',opts:['Add \u22128\u03C0','Add 8\u03C0','Multiply by 1/4','Multiply by 1/\u03C0'],correct:0,result:'72\u03C0 = 4\u03C0h'},
+      {prompt:'Multiply both sides by ___ to isolate h.',opts:['1/(4\u03C0)','4\u03C0','\u22124\u03C0','1/72'],correct:0,result:'(1/(4\u03C0))\u00B772\u03C0 = h \u2192 calculator form'}]},
+  // ── IP forward ──
+  {id:'ip1',stage:1,num:'IP-1',solid:'rect_prism',dir:'forward',prompt:'Find the total surface area.',ans:516,unit:'in\u00B2',
+    dims:{l:'15 in.',w:'8 in.',h:'6 in.'}},
+  {id:'ip2',stage:1,num:'IP-2',solid:'cylinder',dir:'forward',prompt:'Find the total surface area. Round to nearest hundredth.',ans:835.66,unit:'cm\u00B2',tol:0.5,
+    dims:{r:'r = 7 cm',h:'h = 12 cm'}},
+  {id:'ip3',stage:1,num:'IP-3',solid:'tri_prism',dir:'forward',prompt:'Find the total surface area. Base is a right triangle.',ans:828,unit:'m\u00B2',
+    dims:{a:'9 m',b:'12 m',ph:'h = 20 m',hyp:'?'}},
+  {id:'ip4',stage:1,num:'IP-4',solid:'rect_prism',dir:'forward',prompt:'Find the total surface area. (Square base!)',ans:138,unit:'in\u00B2',
+    dims:{l:'3 in.',w:'3 in.',h:'10 in.'}},
+  {id:'ip5',stage:1,num:'IP-5',solid:'cylinder',dir:'forward',prompt:'Find the total surface area. Round to nearest hundredth.',note:'Diameter, not radius!',ans:527.79,unit:'ft\u00B2',tol:0.5,
+    dims:{d:'d = 14 ft',h:'h = 5 ft'}},
+  // ── IP backward ──
+  {id:'ip6',stage:1,num:'IP-6',solid:'rect_prism',dir:'backward',prompt:'Find the missing height.',ans:7,unit:'cm',
+    dims:{l:'9 cm',w:'3 cm',h:'h = ?',SA:'222 cm\u00B2'},
+    equation:'222 = 54 + 24h',
+    alg:[
+      {prompt:'Add ___ to both sides.',opts:['Add \u221254','Add 54','Multiply by \u00BD','Multiply by 1/24'],correct:0,result:'168 = 24h'},
+      {prompt:'Multiply both sides by ___ to isolate h.',opts:['1/24','24','\u221224','1/168'],correct:0,result:'(1/24)\u00B7168 = h \u2192 calculator form'}]},
+  {id:'ip7',stage:1,num:'IP-7',solid:'cylinder',dir:'backward',prompt:'Find the missing height.',ans:11,unit:'m',
+    dims:{r:'r = 4 m',h:'h = ?',SA:'120\u03C0 m\u00B2'},
+    equation:'120\u03C0 = 8\u03C0h + 32\u03C0',
+    alg:[
+      {prompt:'Add ___ to both sides.',opts:['Add \u221232\u03C0','Add 32\u03C0','Multiply by 1/\u03C0','Multiply by 1/8'],correct:0,result:'88\u03C0 = 8\u03C0h'},
+      {prompt:'Multiply both sides by ___ to isolate h.',opts:['1/(8\u03C0)','8\u03C0','\u22128\u03C0','1/88'],correct:0,result:'(1/(8\u03C0))\u00B788\u03C0 = h \u2192 calculator form'}]},
+  {id:'ip8',stage:1,num:'IP-8',solid:'rect_prism',dir:'backward',prompt:'Find the missing height.',ans:6,unit:'in',
+    dims:{l:'20 in.',w:'10 in.',h:'h = ?',SA:'760 in.\u00B2'},
+    equation:'760 = 400 + 60h',
+    alg:[
+      {prompt:'Add ___ to both sides.',opts:['Add \u2212400','Add 400','Multiply by \u00BD','Multiply by 1/60'],correct:0,result:'360 = 60h'},
+      {prompt:'Multiply both sides by ___ to isolate h.',opts:['1/60','60','\u221260','1/360'],correct:0,result:'(1/60)\u00B7360 = h \u2192 calculator form'}]},
+  {id:'ip9',stage:1,num:'IP-9',solid:'tri_prism',dir:'backward',prompt:'Find the prism height.',ans:10,unit:'cm',
+    dims:{a:'3 cm',b:'4 cm',ph:'h = ?',SA:'132 cm\u00B2'},
+    equation:'132 = 12h + 12',
+    alg:[
+      {prompt:'Add ___ to both sides.',opts:['Add \u221212','Add 12','Multiply by 1/12','Multiply by \u00BD'],correct:0,result:'120 = 12h'},
+      {prompt:'Multiply both sides by ___ to isolate h.',opts:['1/12','12','\u221212','1/120'],correct:0,result:'(1/12)\u00B7120 = h \u2192 calculator form'}]},
+  {id:'ip10',stage:1,num:'IP-10',solid:'cylinder',dir:'backward',prompt:'Find the missing height.',ans:14,unit:'ft',
+    dims:{r:'r = 2 ft',h:'h = ?',SA:'64\u03C0 ft\u00B2'},
+    equation:'64\u03C0 = 4\u03C0h + 8\u03C0',
+    alg:[
+      {prompt:'Add ___ to both sides.',opts:['Add \u22128\u03C0','Add 8\u03C0','Multiply by 1/4','Multiply by 1/\u03C0'],correct:0,result:'56\u03C0 = 4\u03C0h'},
+      {prompt:'Multiply both sides by ___ to isolate h.',opts:['1/(4\u03C0)','4\u03C0','\u22124\u03C0','1/56'],correct:0,result:'(1/(4\u03C0))\u00B756\u03C0 = h \u2192 calculator form'}]},
+  // ── CR ──
+  {id:'cr1',stage:2,num:'CR-1',type:'explain',prompt:'Gift box: 10 in. \u00D7 8 in. \u00D7 4 in. How much wrapping paper (no overlap)?',
+    key:'SA = 2(80 + 40 + 32) = 2(152) = 304 in\u00B2. You need 304 square inches of wrapping paper.'},
+  {id:'cr2',stage:2,num:'CR-2',type:'explain',prompt:'Two cylinders, same height (h = 10). Cylinder A: r = 3. Cylinder B: r = 6. Does doubling the radius double the SA?',
+    key:'A: SA = 60\u03C0 + 18\u03C0 = 78\u03C0 \u2248 245. B: SA = 120\u03C0 + 72\u03C0 = 192\u03C0 \u2248 603. 192/78 \u2248 2.46. No \u2014 more than doubles because the base area has r\u00B2.'},
+  {id:'cr3',stage:2,num:'CR-3',type:'explain',prompt:'What is the difference between lateral area and total surface area? When might you use lateral area instead of total SA?',
+    key:'LA = sides only (no top/bottom). SA = LA + both bases. Use LA when a face is hidden \u2014 e.g., composite figures where two shapes share a face, or painting walls but not the floor/ceiling.'}
+];
+
+// ── STATE ──
+var S={},activeQ=0,formulaOrders={},solidOrders={};
+function init(){S={};formulaOrders={};solidOrders={};
+  for(var i=0;i<QS.length;i++){var q=QS[i];
+    S[q.id]={shapeSel:'',shapeOk:false,formulaSel:'',formulaOk:false,algStep:0,algSel:-1,algDone:false,ansVal:'',correct:false,dismissed:false,feedback:'',
+      shapeAttempts:0,formulaAttempts:0,algAttempts:0,ansAttempts:0,redirected:false,redirectStep:'',skipped:false,crText:''};
+    if(q.type!=='explain'){formulaOrders[q.id]=shuffle(ALL_FORMULAS);solidOrders[q.id]=shuffle(SOLIDS);}}
+  activeQ=0;}
+function navTo(qi){if(qi>=0&&qi<QS.length){activeQ=qi;render();window.scrollTo({top:0,behavior:'smooth'});}}
+
+// ── ACTIONS ──
+function tapShape(id,shape){
+  var q=qById(id),s=S[id];if(s.shapeOk||s.redirected)return;
+  s.shapeSel=shape;s.feedback='';
+  if(shape===q.solid){s.shapeOk=true;}
+  else{s.shapeAttempts++;
+    if(s.shapeAttempts>=2){s.redirected=true;s.redirectStep='shape';s.feedback='redirect:';}
+    else s.feedback='err:Look at the 3D shape in the diagram. Which solid matches?';}
+  render();}
+
+function tapFormula(id,fid){
+  var q=qById(id),s=S[id];if(s.formulaOk||s.redirected)return;
+  s.formulaSel=fid;s.feedback='';
+  if(fid===S2F[q.solid]){s.formulaOk=true;}
+  else{s.formulaAttempts++;
+    if(s.formulaAttempts>=3){s.redirected=true;s.redirectStep='formula';s.feedback='redirect:';}
+    else if(fid==='ph'||fid==='cyl_la')s.feedback='err:That\u2019s just lateral area \u2014 you need total surface area (add the bases).';
+    else if(fid==='vol_prism'||fid==='vol_cyl')s.feedback='err:That\u2019s volume, not surface area.';
+    else if(fid==='ph2b'&&q.solid==='cylinder')s.feedback='err:Ph + 2B is for prisms. This is a cylinder.';
+    else if(fid==='cyl_sa'&&q.solid!=='cylinder')s.feedback='err:That formula is for cylinders, not prisms.';
+    else s.feedback='err:That doesn\u2019t match this solid.';}
+  render();}
+function pickAlg(id,idx){var s=S[id];if(!s.redirected){s.algSel=idx;s.feedback='';render();}}
+function checkAlg(id){var q=qById(id),s=S[id],step=q.alg[s.algStep];if(s.redirected)return;
+  if(s.algSel===step.correct){s.algStep++;s.algSel=-1;s.feedback='';if(s.algStep>=q.alg.length)s.algDone=true;}
+  else{s.algAttempts++;if(s.algAttempts>=2){s.redirected=true;s.redirectStep='alg';s.feedback='redirect:';}
+    else s.feedback='err:Not that operation. What undoes what\u2019s happening to the variable?';}render();}
+function checkAnswer(id){var q=qById(id),s=S[id],v=parseFloat(s.ansVal);if(s.redirected)return;
+  if(isNaN(v)){s.feedback='err:Enter a number.';render();return;}
+  s.ansAttempts++;var tol=q.tol||0.5,diff=Math.abs(v-q.ans);
+  if(diff<tol){s.correct=true;s.feedback='ok:';}
+  else if(s.ansAttempts>=3){s.redirected=true;s.redirectStep='ans';s.feedback='redirect:';}
+  else if(diff<q.ans*0.08)s.feedback='warn:Close! Check your rounding or arithmetic.';
+  else{var m='';
+    if(q.solid==='cylinder'&&q.dir==='forward'&&q.dims&&q.dims.d&&v>q.ans*3.5)m='Did you use the diameter? Multiply by \u00BD to get the radius first.';
+    else if(q.dir==='forward'&&q.solid==='cylinder'){
+      var la=q.ans-2*Math.PI*Math.pow(parseFloat((q.dims.r||'').replace(/[^0-9.]/g,'')||'0'),2)*2;
+      // Rough check: if answer ≈ LA only
+    }
+    if(!m&&s.ansAttempts===1)m='Not quite. Check your substitution and try again.';
+    else if(!m)m='Double-check each step on your practice sheet.';
+    s.feedback='err:'+m;}render();}
+function skipProblem(id){
+  var q=qById(id),s=S[id];
+  s.redirected=false;s.feedback='';
+  if(s.redirectStep==='shape'){s.shapeOk=true;s.shapeSel=q.solid;}
+  else if(s.redirectStep==='formula'){s.formulaOk=true;s.formulaSel=S2F[q.solid];}
+  else if(s.redirectStep==='alg'){s.algStep++;s.algSel=-1;if(s.algStep>=q.alg.length)s.algDone=true;}
+  else if(s.redirectStep==='ans'){s.correct=true;s.feedback='ok:';s.dismissed=true;s.skipped=true;}
+  s.redirectStep='';render();}
+function dismiss(id){S[id].dismissed=true;var qi=qIndex(id);if(qi<QS.length-1)activeQ=qi+1;render();window.scrollTo({top:0,behavior:'smooth'});}
+function updAns(id,v){S[id].ansVal=v;S[id].feedback='';}
+function updCR(id,v){S[id].crText=v;}
+function submitCR(id){S[id].correct=true;S[id].feedback='ok:';render();}
+function qById(id){for(var i=0;i<QS.length;i++)if(QS[i].id===id)return QS[i];return null;}
+function qIndex(id){for(var i=0;i<QS.length;i++)if(QS[i].id===id)return i;return -1;}
+
+// ── RENDER ──
+function render(){
+  var nav=document.getElementById('nav');nav.innerHTML='';var ps=-1;
+  for(var i=0;i<QS.length;i++){
+    if(QS[i].stage!==ps){if(ps>=0){var sep=document.createElement('div');sep.className='nav-sep';nav.appendChild(sep);}ps=QS[i].stage;}
+    var d=document.createElement('div');d.className='nd';
+    if(S[QS[i].id].dismissed)d.className+=S[QS[i].id].skipped?' skipped':' done';
+    if(i===activeQ)d.className+=' active';d.textContent=QS[i].num;
+    (function(idx){d.addEventListener('click',function(){navTo(idx);});})(i);nav.appendChild(d);}
+  var done=0;for(var i=0;i<QS.length;i++)if(S[QS[i].id].dismissed)done++;
+  document.getElementById('pbar').style.width=(done/QS.length*100)+'%';
+  var m=document.getElementById('main');m.innerHTML='';var cs=-1;
+  for(var qi=0;qi<QS.length;qi++){
+    var q=QS[qi],st=S[q.id];
+    if(q.stage!==cs){cs=q.stage;if(qi===activeQ||(qi<=activeQ&&QS[activeQ].stage===q.stage)){var sh=document.createElement('div');sh.className='sh';sh.innerHTML='<h2>'+STAGES[q.stage].t+'</h2><p>'+STAGES[q.stage].d+'</p>';m.appendChild(sh);}}
+    var card=document.createElement('div');
+    if(st.dismissed){card.className='card done';card.innerHTML='<div class="qn">'+q.num+'<span class="done-check">\u2713</span></div>';if(QS[activeQ].stage===q.stage)m.appendChild(card);}
+    else if(qi===activeQ){
+      card.className='card v';var h='<div class="qn">'+q.num+'</div><div class="qp">'+esc(q.prompt);
+      if(q.note)h+='<span class="note">'+esc(q.note)+'</span>';
+      h+='</div>';
+      if(q.dims)h+='<div class="q-diagram">'+drawDiagram(q)+'</div>';
+      h+='<div class="body">';
+      h+=q.type==='explain'?renderExplain(q,st):renderCalc(q,st);
+      h+='</div>';card.innerHTML=h;m.appendChild(card);bindEvents(card,q,st);}}
+}
+
+function renderCalc(q,s){
+  var h='';
+  // STEP 1: SOLID ID
+  h+='<div class="step"><div class="step-label">Step 1 \u2014 What solid?</div>';
+  if(!s.shapeOk){
+    h+='<div class="drop-target'+(s.shapeSel?(s.feedback?' wrong':' filled'):'')+'">';
+    h+=s.shapeSel?SOLID_SVG[s.shapeSel]:'<span class="placeholder">Tap the matching solid</span>';
+    h+='</div><div class="chip-zone">';
+    var sh=solidOrders[q.id]||SOLIDS;
+    for(var i=0;i<sh.length;i++)h+='<div class="chip" data-shape="'+sh[i]+'">'+SOLID_SVG[sh[i]]+'</div>';
+    h+='</div>';
+    if(s.feedback&&!s.shapeOk)h+=fbHtml(s.feedback);
+  }else h+='<div class="drop-target correct">'+SOLID_SVG[q.solid]+'<span style="color:var(--ok);font-weight:600;margin-left:8px">\u2713</span></div>';
+  h+='</div>';
+
+  // STEP 2: FORMULA
+  var s2l=!s.shapeOk;
+  h+='<div class="step'+(s2l?' locked':'')+'"><div class="step-label">Step 2 \u2014 What surface area formula?</div>';
+  if(!s.formulaOk){
+    h+='<div class="drop-target'+(s.formulaSel?(s.feedback?' wrong':' filled'):'')+'">';
+    if(s.formulaSel){var fl=null;var fL=formulaOrders[q.id]||[];for(var i=0;i<fL.length;i++)if(fL[i].id===s.formulaSel)fl=fL[i];
+      h+='<span style="font-size:1.05rem;font-weight:500">S.A. = '+(fl?esc(fl.label):'')+'</span>';}
+    else h+='<span style="font-size:1.05rem;font-weight:500;color:var(--muted)">S.A. = </span><span class="placeholder">tap a formula</span>';
+    h+='</div><div class="chip-zone">';
+    var fList=formulaOrders[q.id]||[];
+    for(var i=0;i<fList.length;i++)h+='<div class="chip formula-chip" data-formula="'+fList[i].id+'"><span class="chip-label">'+esc(fList[i].label)+'</span></div>';
+    h+='</div>';
+    if(s.feedback&&s.shapeOk&&!s.formulaOk)h+=fbHtml(s.feedback);
+  }else{var cf=null;for(var i=0;i<SA_FORMULAS.length;i++)if(SA_FORMULAS[i].id===S2F[q.solid])cf=SA_FORMULAS[i];
+    h+='<div class="drop-target correct"><span style="font-size:1.05rem;font-weight:500">S.A. = '+esc(cf.label)+'</span><span style="color:var(--ok);font-weight:600;margin-left:8px">\u2713</span></div>';}
+  h+='</div>';
+
+  // STEP 3: SOLVE
+  var s3l=!s.formulaOk;
+  h+='<div class="step'+(s3l?' locked':'')+'">';
+  if(q.dir==='backward'&&q.alg){
+    h+='<div class="step-label">Step 3 \u2014 Solve the equation</div>';
+    if(!s3l){
+      h+='<div class="eq-display">'+esc(q.equation)+'</div>';
+      for(var a=0;a<s.algStep;a++){
+        h+='<div style="margin-bottom:8px"><span style="color:var(--ok);font-weight:600">\u2713 '+esc(q.alg[a].opts[q.alg[a].correct])+'</span>';
+        if(q.alg[a].result)h+=' \u2192 <span style="font-family:\'JetBrains Mono\',monospace;font-weight:500">'+esc(q.alg[a].result)+'</span>';
+        h+='</div>';}
+      if(!s.algDone&&!s.redirected&&s.algStep<q.alg.length){
+        var curr=q.alg[s.algStep];
+        h+='<div style="font-size:.9rem;font-weight:600;margin:12px 0 8px">'+esc(curr.prompt)+'</div>';
+        h+='<div class="alg-options">';
+        for(var i=0;i<curr.opts.length;i++)h+='<div class="alg-opt'+(s.algSel===i?' sel':'')+'" data-alg="'+i+'">'+esc(curr.opts[i])+'</div>';
+        h+='</div><button class="btn btn-primary" id="chkAlg">Check</button>';
+        if(s.feedback&&s.formulaOk&&!s.algDone)h+=fbHtml(s.feedback);}
+      if(s.algDone&&!s.redirected){
+        h+='<div class="step-label" style="margin-top:14px">Your Answer</div>';
+        h+='<div class="input-row"><input type="text" id="ansInput" placeholder="number only" value="'+esc(s.ansVal)+'"><span style="font-size:.85rem;color:var(--muted)">'+esc(q.unit)+'</span><button class="btn btn-primary" id="chkAns">Check</button></div>';
+        if(s.feedback&&s.algDone)h+=fbHtml(s.feedback);
+        if(s.correct)h+='<button class="btn btn-next" id="nextBtn">Next \u2192</button>';}
+      if(s.redirected&&s.feedback)h+=fbHtml(s.feedback);}
+  }else{
+    h+='<div class="step-label">Step 3 \u2014 Solve on your practice sheet, enter your answer</div>';
+    if(!s3l&&!s.redirected){
+      h+='<div class="input-row"><input type="text" id="ansInput" placeholder="number only" value="'+esc(s.ansVal)+'"><span style="font-size:.85rem;color:var(--muted)">'+esc(q.unit)+'</span><button class="btn btn-primary" id="chkAns">Check</button></div>';
+      if(s.feedback&&s.formulaOk)h+=fbHtml(s.feedback);
+      if(s.correct)h+='<button class="btn btn-next" id="nextBtn">Next \u2192</button>';}
+    if(s.redirected&&s.feedback&&s.formulaOk)h+=fbHtml(s.feedback);}
+  h+='</div>';return h;
+}
+
+function renderExplain(q,s){
+  var h='<div class="step"><div class="step-label">Your Explanation</div>';
+  h+='<textarea class="cr-textarea" id="crInput" placeholder="Type your reasoning...">'+esc(s.crText)+'</textarea>';
+  if(!s.correct)h+='<div style="margin-top:10px"><button class="btn btn-primary" id="crSubmit">Show Answer & Compare</button></div>';
+  if(s.correct){h+='<div class="fb ok" style="margin-top:10px"><strong>Model Answer:</strong><br>'+esc(q.key)+'</div>';h+='<button class="btn btn-next" id="nextBtn" style="margin-top:8px">Next \u2192</button>';}
+  h+='</div>';return h;}
+
+function fbHtml(fb){if(!fb)return '';var ci=fb.indexOf(':'),t=ci>=0?fb.substring(0,ci):'',msg=ci>=0?fb.substring(ci+1):'';
+  if(t==='ok')return '<div class="fb ok">\u2713 Correct!</div>';
+  if(t==='warn')return '<div class="fb warn">\u26A0 '+esc(msg)+'</div>';
+  if(t==='redirect')return '<div class="redirect-banner">\u270B Bring your practice sheet to your teacher and show them this step. It\u2019s okay to ask for help.</div><button class="btn btn-skip" id="skipBtn">Teacher helped \u2014 continue</button>';
+  return '<div class="fb err">\u2717 '+esc(msg)+'</div>';}
+function esc(s){return(s||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+
+function bindEvents(card,q,st){
+  card.querySelectorAll('.chip[data-shape]').forEach(function(c){c.addEventListener('click',function(){tapShape(q.id,c.getAttribute('data-shape'));});});
+  card.querySelectorAll('.chip[data-formula]').forEach(function(c){c.addEventListener('click',function(){tapFormula(q.id,c.getAttribute('data-formula'));});});
+  card.querySelectorAll('.alg-opt').forEach(function(c){c.addEventListener('click',function(){pickAlg(q.id,parseInt(c.getAttribute('data-alg')));});});
+  var ca2=card.querySelector('#chkAlg');if(ca2)ca2.addEventListener('click',function(){checkAlg(q.id);});
+  var ai=card.querySelector('#ansInput');if(ai){ai.addEventListener('input',function(){updAns(q.id,this.value);});ai.addEventListener('keydown',function(e){if(e.key==='Enter')checkAnswer(q.id);});}
+  var ca=card.querySelector('#chkAns');if(ca)ca.addEventListener('click',function(){checkAnswer(q.id);});
+  var nb=card.querySelector('#nextBtn');if(nb)nb.addEventListener('click',function(){dismiss(q.id);});
+  var sb=card.querySelector('#skipBtn');if(sb)sb.addEventListener('click',function(){skipProblem(q.id);});
+  var ci=card.querySelector('#crInput');if(ci)ci.addEventListener('input',function(){updCR(q.id,this.value);});
+  var cs2=card.querySelector('#crSubmit');if(cs2)cs2.addEventListener('click',function(){submitCR(q.id);});}
+init();render();
+</script>
+</body>
+</html>
